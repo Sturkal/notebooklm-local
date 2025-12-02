@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: notebooklm-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CHROMA_DB_DIR=/data/chroma
+      # Redis for rate limiting (enable by setting REDIS_URL to redis://redis:6379/0)
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - backend_data:/data
+    networks:
+      - notebooklm-net
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  redis:
+    image: redis:7-alpine
+    container_name: notebooklm-redis
+    restart: unless-stopped
+    networks:
+      - notebooklm-net
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: notebooklm-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - notebooklm-net
+
+volumes:
+  backend_data:
+
+networks:
+  notebooklm-net:
+    driver: bridge

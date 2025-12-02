@@ -1,0 +1,52 @@
+# Core web framework
+fastapi>=0.111.0,<0.116.0
+uvicorn[standard]>=0.23.2,<0.26.0
+
+# Vector database / embeddings
+# Pin to the version tested locally to avoid resolver pulling incompatible onnxruntime
+chromadb==0.5.23
+chroma-hnswlib==0.7.6
+
+# Data handling
+pandas>=2.3.3,<2.5.0
+
+# Pydantic (matching FastAPI 0.x)
+pydantic>=1.10.12,<2.0.0
+
+# File handling
+python-docx>=1.2.0
+pymupdf>=1.26.6
+python-multipart>=0.0.20
+
+# NLP / embeddings
+# sentence-transformers provides SentenceTransformer class for embeddings.
+# It may pull heavy dependencies (torch, transformers). Pin to a stable version.
+sentence-transformers>=5.1.2,<6.0.0
+transformers>=4.34.0
+torch>=2.0.0
+
+# OCR fallback libraries
+pytesseract>=0.3.10
+pdf2image>=1.16.0
+
+# Optional / platform-specific runtime (onnxruntime) required by some chromadb
+# releases for certain features. Install manually on systems where a wheel
+# is available if needed (example: `onnxruntime>=1.14.1`).
+# onnxruntime>=1.14.1
+
+# If you plan to use GPU or specific torch builds, pin `torch` appropriately,
+# e.g. `torch==2.2.0` or use the appropriate CUDA wheel from PyTorch.
+
+# HTTP requests
+requests>=2.32.5
+
+# Environment variables
+python-dotenv>=1.2.1
+
+# Testing
+pytest>=7.4.0
+httpx>=0.24.0
+pytest-cov>=4.1.0
+
+# Redis client for production rate limiter
+redis>=4.6.0
