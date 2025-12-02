@@ -1,0 +1,14 @@
+# Bỏ qua file bytecode
+__pycache__/
+*.pyc
+
+# Bỏ qua môi trường ảo (Virtual Environment)
+venv/
+.env/
+.vscode/
+.vs/
+.uploads/
+dist/
+build/
+node_modules/
+chroma_db/

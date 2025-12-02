@@ -1,0 +1,210 @@
+/* Reset cơ bản */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body, html, #root {
+  height: 100%;
+  width: 100%;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/* Layout chính: sidebar + chat area */
+.app-container {
+  display: flex;
+  height: 100vh;
+}
+
+/* Sidebar Notebook + Upload */
+.sidebar {
+  width: 320px;
+  border-right: 1px solid #ddd;
+  padding: 16px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar h3, .sidebar h4 {
+  margin-bottom: 8px;
+}
+
+.sidebar hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid #ddd;
+}
+
+.sidebar input[type="file"] {
+  margin-bottom: 8px;
+}
+
+.sidebar button {
+  padding: 6px 12px;
+  border: 1px solid #007bff;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.sidebar button:hover {
+  background-color: #0056b3;
+}
+
+/* Chat area */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  /* keep overall layout tidy; inner messages container handles scrolling */
+  overflow: hidden;
+  background-color: #f1f3f5;
+}
+
+/* Chat messages */
+.chat-message {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+/* Scrollable messages container inside chat area */
+.chat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+/* Ensure long words/lines wrap instead of overflowing horizontally */
+.chat-message, .chat-messages {
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* On very narrow viewports, allow message bubble to consume most width */
+@media (max-width: 480px) {
+  .chat-message { max-width: 95%; }
+}
+
+.chat-message.user {
+  background-color: #007bff;
+  color: white;
+  align-self: flex-end;
+}
+
+.chat-message.bot {
+  background-color: #e9ecef;
+  color: #333;
+  align-self: flex-start;
+}
+
+/* Input box */
+.chat-input {
+  display: flex;
+  margin-top: auto;
+  gap: 8px;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.chat-input button {
+  padding: 8px 16px;
+  border: none;
+  background-color: #28a745;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chat-input button:hover {
+  background-color: #218838;
+}
+
+/* Scrollbar cơ bản */
+.chat-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-area::-webkit-scrollbar-thumb {
+  background-color: #bbb;
+  border-radius: 4px;
+}
+
+.chat-area::-webkit-scrollbar-track {
+  background-color: #f1f3f5;
+}
+
+/* Toast notifications */
+.toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  z-index: 9999;
+}
+.toast.info { background: #17a2b8; color: #fff; }
+.toast.success { background: #28a745; color: #fff; }
+.toast.error { background: #dc3545; color: #fff; }
+
+.file-selected { margin-top: 8px; font-size: 0.9rem; color: #555 }
+
+.bot-block .bot-answer { margin-bottom: 8px }
+.bot-sources ul { list-style: none; padding-left: 0 }
+.bot-sources li { margin-bottom: 8px; padding: 6px; background:#fff; border-radius:6px; border:1px solid #e6e6e6 }
+.source-id { font-weight: 600; margin-bottom:4px }
+.snippet { color:#444; margin-top:4px }
+
+/* Simple spinner for upload button */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-top-color: rgba(255,255,255,1);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.btn-with-spinner { display: inline-flex; align-items: center; gap: 6px }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error details styling used by Chat */
+.error-details summary { font-weight: 600 }
+.error-details pre { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: #222 }
+
+/* Documents list scroll container in sidebar */
+.documents-scroll {
+  overflow-y: auto;
+  /* leave space for upload controls and headings; tuned for typical sidebar layout */
+  max-height: calc(100vh - 220px);
+  min-height: 120px;
+  padding-right: 8px;
+}
+
+/* Ensure the UL doesn't exceed container width and allows wrapping */
+.documents-scroll ul {
+  margin: 0;
+  padding-left: 16px;
+  overflow: auto;
+  max-width: 100%;
+}
