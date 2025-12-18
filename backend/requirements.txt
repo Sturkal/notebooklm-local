@@ -3,12 +3,12 @@ fastapi>=0.111.0,<0.116.0
 uvicorn[standard]>=0.23.2,<0.26.0
 
 # Vector database / embeddings
-# Pin to the version tested locally to avoid resolver pulling incompatible onnxruntime
-chromadb==0.5.23
+# Allow newer ChromaDB releases; keep minimum tested version
+chromadb>=0.5.23
 chroma-hnswlib==0.7.6
 
 # Data handling
-pandas>=2.3.3,<2.5.0
+# pandas removed — not referenced in the codebase (keeps requirements minimal)
 
 # Pydantic (matching FastAPI 0.x)
 pydantic>=1.10.12,<2.0.0
@@ -41,11 +41,10 @@ pdf2image>=1.16.0
 requests>=2.32.5
 
 # Environment variables
-python-dotenv>=1.2.1
+# `python-dotenv` removed — not used in the repository (keep env via OS/Docker)
 
 # Testing
 pytest>=7.4.0
-httpx>=0.24.0
 pytest-cov>=4.1.0
 
 # Redis client for production rate limiter

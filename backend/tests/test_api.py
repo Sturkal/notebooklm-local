@@ -26,7 +26,10 @@ class StubIndexer:
         return [text]
 
     def list_documents(self):
-        return [{"doc_id": d["doc_id"], "count": 1, "sample_metadata": d.get("metadata")} for d in self.docs]
+        return [
+            {"doc_id": d["doc_id"], "count": 1, "sample_metadata": d.get("metadata")}
+            for d in self.docs
+        ]
 
     def delete_document(self, doc_id):
         before = len(self.docs)

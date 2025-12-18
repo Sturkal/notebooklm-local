@@ -11,8 +11,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - CHROMA_DB_DIR=/data/chroma
-      # Redis for rate limiting (enable by setting REDIS_URL to redis://redis:6379/0)
+      # Redis for rate limiting
       - REDIS_URL=redis://redis:6379/0
+      # Ollama backend (use service hostname 'ollama' in docker network)
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama2:latest
     volumes:
       - backend_data:/data
     networks:
@@ -26,6 +29,18 @@ services:
     networks:
       - notebooklm-net
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: notebooklm-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    networks:
+      - notebooklm-net
+    # Optional: mount volume to persist model cache
+    # volumes:
+    #   - ollama_data:/root/.ollama
+
   frontend:
     build:
       context: ./frontend
@@ -38,6 +53,7 @@ services:
 
 volumes:
   backend_data:
+  # ollama_data:
 
 networks:
   notebooklm-net:

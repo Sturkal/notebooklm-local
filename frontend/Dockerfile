@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies (clean install to avoid esbuild version mismatch)
+RUN npm ci --prefer-offline --no-audit
 
 # Copy source code
 COPY . .

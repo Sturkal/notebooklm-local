@@ -1,8 +1,14 @@
 # NotebookLM RAG Project - Complete Documentation
 
-**Last Updated:** After comprehensive code review and commenting
+**Last Updated:** 2025-12-19 — dependency cleanup
 
-This document summarizes the complete NotebookLM RAG (Retrieval-Augmented Generation) project, including all components, architecture, and detailed code documentation.
+Changelog (2025-12-19):
+- Removed unused Python packages from `backend/requirements.txt`: `pandas`, `python-dotenv`, `httpx`.
+- Relaxed `chromadb` pin to `chromadb>=0.5.23` to allow newer compatible releases.
+- Removed unused frontend dependency `axios` from `frontend/package.json` (code uses `fetch`).
+- Removed unused imports across backend Python modules and formatted code with `black`.
+
+This document summarizes the complete NotebookLM RAG (Retrieval-Augmented Generation) project, including all components, architecture, and detailed code documentation. The changelog above notes the recent cleanup and recommended next steps to update your local environment.
 
 ## Project Overview
 
@@ -333,7 +339,7 @@ VITE_API_BASE_URL : Backend URL (e.g., http://localhost:8000)
 # In Docker
 docker compose run --rm backend python -m pytest -v
 
-# Locally (requires pytest, httpx, fastapi, starlette)
+# Locally (requires pytest, fastapi, starlette)
 cd backend
 pytest -v
 pytest -v --cov  # With coverage
@@ -398,6 +404,34 @@ npm run dev
 - System packages: tesseract-ocr, poppler (for OCR)
 
 ---
+
+## Post-cleanup: Update local environment
+
+After the dependency cleanup performed on 2025-12-19, update your local environment with these commands to apply the changes and verify everything still works.
+
+Python (backend):
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\Activate.ps1   # PowerShell on Windows
+pip install --upgrade pip
+pip install -r requirements.txt --upgrade
+pytest -v
+```
+
+Node (frontend):
+```bash
+cd frontend
+npm install
+npm run build   # or `npm run dev` for development
+```
+
+Docker (optional):
+```bash
+docker compose build --no-cache backend
+docker compose up -d backend
+```
+
 
 ## Security Considerations
 

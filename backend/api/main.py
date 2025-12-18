@@ -55,16 +55,25 @@ app = FastAPI()
 # Configure CORS more securely via environment variable; fallback to localhost
 # origins for dev. In production, set ALLOWED_ORIGINS to a comma-separated list
 # of trusted frontend origins to prevent cross-origin attacks.
-# 
+#
 # Example: ALLOWED_ORIGINS="https://app.example.com,https://www.example.com"
 
 allow_origins_env = os.environ.get("ALLOWED_ORIGINS")
 if allow_origins_env:
     allow_origins = [o.strip() for o in allow_origins_env.split(",") if o.strip()]
 else:
-    allow_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"]
+    allow_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+    ]
 
-app.add_middleware(CORSMiddleware, allow_origins=allow_origins, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ============================================================================
 # Rate Limiting Configuration
@@ -96,19 +105,25 @@ if REDIS_URL:
         parsed = urlparse(REDIS_URL)
         redis_kwargs = {}
         if parsed.password:
-            redis_kwargs['password'] = parsed.password
+            redis_kwargs["password"] = parsed.password
         _redis_client = redis.Redis.from_url(REDIS_URL, **redis_kwargs)
         # Verify connection is working before proceeding
         _redis_client.ping()
-        print(f"DEBUG: Connected to Redis for rate limiting: {REDIS_URL}", file=sys.stderr)
+        print(
+            f"DEBUG: Connected to Redis for rate limiting: {REDIS_URL}", file=sys.stderr
+        )
     except Exception as e:
-        print(f"WARNING: Could not connect to Redis at {REDIS_URL}: {e}", file=sys.stderr)
+        print(
+            f"WARNING: Could not connect to Redis at {REDIS_URL}: {e}", file=sys.stderr
+        )
         _redis_client = None
 
 # In-memory fallback rate limiter for single-process deployments
 # Thread-safe implementation using a lock and timestamp-based request log
 _rl_lock = threading.Lock()
-_requests_log: dict = {}  # Key: client IP, Value: list of (timestamp, endpoint_path) tuples
+_requests_log: dict = (
+    {}
+)  # Key: client IP, Value: list of (timestamp, endpoint_path) tuples
 
 # ============================================================================
 # Background Indexing Status Tracker
@@ -120,21 +135,23 @@ _requests_log: dict = {}  # Key: client IP, Value: list of (timestamp, endpoint_
 # indexing progress without blocking the upload endpoint response.
 
 _index_lock = threading.Lock()
-_index_status: dict = {}  # Key: doc_id, Value: status string (pending|indexing|done|failed:msg)
+_index_status: dict = (
+    {}
+)  # Key: doc_id, Value: status string (pending|indexing|done|failed:msg)
 
 
 def _run_index_background(doc_id: str, text: str, metadata: dict | None = None):
     """
     Run document indexing in background (called from BackgroundTasks or thread).
-    
+
     Chunks the text, creates embeddings, and stores vectors in ChromaDB.
     Updates _index_status to track progress: pending -> indexing -> done|failed
-    
+
     Args:
         doc_id: Unique document identifier
         text: Extracted text content from the uploaded file
         metadata: Optional metadata dict (e.g., {"source_filename": "doc.pdf"})
-        
+
     Side Effects:
         - Updates _index_status[doc_id]
         - Adds chunks+embeddings to ChromaDB via self.get_indexer()
@@ -158,14 +175,14 @@ def _run_index_background(doc_id: str, text: str, metadata: dict | None = None):
 async def simple_rate_limiter(request: Request, call_next):
     """
     HTTP middleware: enforces rate limiting on a per-IP, per-endpoint basis.
-    
+
     Preferred Backend: Redis (atomic, distributed-safe) via REDIS_URL env var.
     Fallback: In-memory (thread-safe but single-process only) using _requests_log dict.
-    
+
     Implementation:
     - Redis mode: uses INCR key with expiry to track request counts in fixed windows
     - In-memory mode: stores (timestamp, path) tuples per IP, filters by window age
-    
+
     Returns 429 (Too Many Requests) if limits are exceeded:
     - /upload: UPLOAD_RATE_LIMIT per RATE_LIMIT_WINDOW
     - /ask: ASK_RATE_LIMIT per RATE_LIMIT_WINDOW
@@ -188,12 +205,21 @@ async def simple_rate_limiter(request: Request, call_next):
             _redis_client.expire(key, RATE_LIMIT_WINDOW + 1)
 
             if path == "/upload" and count > UPLOAD_RATE_LIMIT:
-                return JSONResponse(status_code=429, content={"detail": "Too many upload requests, try later"})
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many upload requests, try later"},
+                )
             if path.startswith("/ask") and count > ASK_RATE_LIMIT:
-                return JSONResponse(status_code=429, content={"detail": "Too many requests to ask endpoint, slow down"})
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many requests to ask endpoint, slow down"},
+                )
         except Exception as e:
             # If Redis fails at runtime, fall back to in-memory and log warning
-            print(f"WARNING: Redis rate limiter error, falling back to in-memory: {e}", file=sys.stderr)
+            print(
+                f"WARNING: Redis rate limiter error, falling back to in-memory: {e}",
+                file=sys.stderr,
+            )
 
     # In-memory fallback (thread-safe but single-process only)
     with _rl_lock:
@@ -206,9 +232,15 @@ async def simple_rate_limiter(request: Request, call_next):
 
         # Check limits and return 429 if exceeded
         if path == "/upload" and upload_count >= UPLOAD_RATE_LIMIT:
-            return JSONResponse(status_code=429, content={"detail": "Too many upload requests, try later"})
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many upload requests, try later"},
+            )
         if path.startswith("/ask") and ask_count >= ASK_RATE_LIMIT:
-            return JSONResponse(status_code=429, content={"detail": "Too many requests to ask endpoint, slow down"})
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests to ask endpoint, slow down"},
+            )
 
         # Record this request and update the log
         lst.append((now, path))
@@ -216,6 +248,7 @@ async def simple_rate_limiter(request: Request, call_next):
 
     response = await call_next(request)
     return response
+
 
 # ============================================================================
 # Lazy Indexer Initialization
@@ -235,14 +268,14 @@ IDX = None  # Lazily initialized on first call to get_indexer()
 def get_indexer() -> Indexer:
     """
     Get or initialize the Indexer singleton.
-    
+
     On first call, instantiates Indexer which loads the SentenceTransformer
     embedding model and initializes ChromaDB. Subsequent calls return the
     cached instance.
-    
+
     Returns:
         Indexer: The global indexer instance
-        
+
     Raises:
         ImportError: If required dependencies (sentence-transformers, chromadb)
                      cannot be imported
@@ -251,6 +284,7 @@ def get_indexer() -> Indexer:
     if IDX is None:
         IDX = Indexer(db_dir=CHROMA_DB_DIR)
     return IDX
+
 
 # ============================================================================
 # Upload Configuration & Security
@@ -267,7 +301,9 @@ def get_indexer() -> Indexer:
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", ".uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-MAX_UPLOAD_SIZE = int(os.environ.get("MAX_UPLOAD_SIZE", 10 * 1024 * 1024))  # 10 MB default
+MAX_UPLOAD_SIZE = int(
+    os.environ.get("MAX_UPLOAD_SIZE", 10 * 1024 * 1024)
+)  # 10 MB default
 ALLOWED_EXT = {".pdf", ".docx", ".txt"}
 
 
@@ -280,7 +316,7 @@ async def upload(
 ):
     """
     Upload a document and queue it for asynchronous indexing.
-    
+
     This endpoint:
     1. Validates file type (must be .pdf, .docx, or .txt)
     2. Enforces size limits (MAX_UPLOAD_SIZE)
@@ -288,12 +324,12 @@ async def upload(
     4. Extracts text (with optional OCR fallback for PDFs)
     5. Pre-validates that chunks can be generated (fail early if doc is empty)
     6. Schedules background indexing and returns immediately
-    
+
     Form Parameters:
         file (UploadFile): The document file to upload
         enable_ocr (bool): Enable OCR fallback if PDF text extraction fails
         ocr_max_pages (int): Max pages to process with OCR (if enabled)
-        
+
     Returns:
         {
             "status": "ok",
@@ -303,11 +339,11 @@ async def upload(
             "ocr_truncated": bool,
             "indexing": "pending"  // Background task scheduled
         }
-        
+
     Raises:
         HTTPException 400: Invalid file type or size
         HTTPException 500: Unexpected error
-        
+
     Notes:
         - Upload returns immediately; indexing happens in background
         - Poll /index/status/{doc_id} to monitor indexing progress
@@ -332,14 +368,17 @@ async def upload(
     # ========================================================================
     data = await file.read()
     if len(data) > MAX_UPLOAD_SIZE:
-        raise HTTPException(status_code=413, detail=f"Uploaded file exceeds maximum allowed size of {MAX_UPLOAD_SIZE} bytes")
+        raise HTTPException(
+            status_code=413,
+            detail=f"Uploaded file exceeds maximum allowed size of {MAX_UPLOAD_SIZE} bytes",
+        )
 
     # ========================================================================
     # Step 3: Save File and Extract Text
     # ========================================================================
     with open(path, "wb") as f:
         f.write(data)
-    
+
     try:
         print(f"DEBUG: Extracting text from {path}", file=sys.stderr)
         # Log saved file size for diagnostics
@@ -353,12 +392,15 @@ async def upload(
         if res is None:
             raise ValueError("Unsupported file type or extraction failed")
         _, text, ocr_used, page_count, ocr_truncated = res
-        
+
         # Log a short preview of the extracted text to help diagnose extractor failures
-        preview = (text[:200] + '...') if len(text) > 200 else text
+        preview = (text[:200] + "...") if len(text) > 200 else text
         print(f"DEBUG: Extracted text length: {len(text)}", file=sys.stderr)
         print(f"DEBUG: Extract preview: {repr(preview)}", file=sys.stderr)
-        print(f"DEBUG: OCR requested={enable_ocr}, OCR used={ocr_used}, ocr_max_pages={ocr_max_pages}, page_count={page_count}, ocr_truncated={ocr_truncated}", file=sys.stderr)
+        print(
+            f"DEBUG: OCR requested={enable_ocr}, OCR used={ocr_used}, ocr_max_pages={ocr_max_pages}, page_count={page_count}, ocr_truncated={ocr_truncated}",
+            file=sys.stderr,
+        )
 
         # ====================================================================
         # Step 4: Pre-validate Indexing (Fail Early)
@@ -366,19 +408,26 @@ async def upload(
         # Before scheduling background task, ensure the text can be chunked.
         # This catches empty documents early and avoids queuing impossible tasks.
         doc_id = uuid.uuid4().hex
-        print(f"DEBUG: Scheduling background indexing for doc_id={doc_id}", file=sys.stderr)
+        print(
+            f"DEBUG: Scheduling background indexing for doc_id={doc_id}",
+            file=sys.stderr,
+        )
 
         try:
             chunks = get_indexer().chunk_document(text)
             if not chunks:
-                raise ValueError("No text chunks generated for indexing (empty document or extraction failure)")
+                raise ValueError(
+                    "No text chunks generated for indexing (empty document or extraction failure)"
+                )
         except Exception as e:
             print(f"DEBUG: Index pre-validation failed: {e}", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             if isinstance(e, ValueError):
                 raise HTTPException(status_code=400, detail=f"Indexing error: {e}")
             else:
-                raise HTTPException(status_code=500, detail=f"Index validation error: {e}")
+                raise HTTPException(
+                    status_code=500, detail=f"Index validation error: {e}"
+                )
 
         # ====================================================================
         # Step 5: Schedule Background Indexing
@@ -390,14 +439,27 @@ async def upload(
 
         if background_tasks is None:
             # Fallback: run indexing in a new thread if BackgroundTasks not provided
-            t = threading.Thread(target=_run_index_background, args=(doc_id, text, {"source_filename": file.filename}), daemon=True)
+            t = threading.Thread(
+                target=_run_index_background,
+                args=(doc_id, text, {"source_filename": file.filename}),
+                daemon=True,
+            )
             t.start()
         else:
-            background_tasks.add_task(_run_index_background, doc_id, text, {"source_filename": file.filename})
+            background_tasks.add_task(
+                _run_index_background, doc_id, text, {"source_filename": file.filename}
+            )
 
         print(f"DEBUG: Upload queued for doc_id={doc_id}", file=sys.stderr)
-        return {"status": "ok", "doc_id": doc_id, "ocr_used": bool(ocr_used), "page_count": page_count, "ocr_truncated": bool(ocr_truncated), "indexing": "pending"}
-    
+        return {
+            "status": "ok",
+            "doc_id": doc_id,
+            "ocr_used": bool(ocr_used),
+            "page_count": page_count,
+            "ocr_truncated": bool(ocr_truncated),
+            "indexing": "pending",
+        }
+
     except HTTPException:
         # Re-raise FastAPI HTTP errors (already have proper status codes)
         if os.path.exists(path):
@@ -406,7 +468,7 @@ async def upload(
             except Exception:
                 pass
         raise
-    
+
     except Exception as e:
         # Cleanup temp file on unexpected errors
         print(f"DEBUG: Unexpected error in upload: {e}", file=sys.stderr)
@@ -423,19 +485,19 @@ async def upload(
 def ask(q: str, top_k: int = 5, model: str | None = None):
     """
     Query indexed documents and ask the LLM using Retrieval-Augmented Generation.
-    
+
     This endpoint implements the RAG pattern:
     1. Search the vector database for chunks most similar to the query
     2. Build a prompt with the retrieved context and user question
     3. Send the prompt to the LLM (Ollama or configured backend)
     4. Return the answer along with source chunks and metadata
-    
+
     Query Parameters:
         q (str): The user's question
         top_k (int): Number of document chunks to retrieve (default 5)
         model (str): Optional LLM model name (passed to backend, e.g., Ollama)
                      If omitted, uses LLM_BACKEND default
-        
+
     Returns:
         {
             "answer": str,           # LLM's response
@@ -443,10 +505,10 @@ def ask(q: str, top_k: int = 5, model: str | None = None):
             "snippets": [str],       # Text of retrieved chunks
             "metadatas": [dict]      # Metadata for each chunk
         }
-        
+
     Raises:
         HTTPException 500: Vector DB query or LLM service error
-        
+
     Notes:
         - The RAG prompt instructs the LLM to:
           * Use ONLY the provided context (not external knowledge)
@@ -514,10 +576,10 @@ def ask(q: str, top_k: int = 5, model: str | None = None):
 def health():
     """
     Health check endpoint.
-    
+
     Returns:
         {"ok": True} if service is operational
-        
+
     Notes:
         - This is a simple liveness check; does not verify database or LLM connectivity
         - For deep health checks, consider adding database/LLM status
@@ -529,7 +591,7 @@ def health():
 def list_documents():
     """
     List all indexed documents with metadata.
-    
+
     Returns:
         {
             "documents": [
@@ -541,10 +603,10 @@ def list_documents():
                 ...
             ]
         }
-        
+
     Raises:
         HTTPException 500: Database query error
-        
+
     Notes:
         - Each document may have multiple chunks (see count)
         - sample_metadata is from the first chunk; others may have different metadata
@@ -560,12 +622,12 @@ def list_documents():
 def list_llm_models():
     """
     List available LLM models from the configured backend.
-    
+
     Returns:
         {
             "models": [str]  # List of model names (e.g., ["llama3.1", "mistral", ...])
         }
-        
+
     Notes:
         - Returns empty list if LLM backend is not available or doesn't support model listing
         - For Ollama, queries the /models endpoint
@@ -582,16 +644,16 @@ def list_llm_models():
 def index_status(doc_id: str):
     """
     Check the background indexing status of a document.
-    
+
     Path Parameters:
         doc_id (str): The document ID returned from /upload
-        
+
     Returns:
         {
             "doc_id": str,                  # Echo of the doc_id
             "status": str                   # One of: unknown, pending, indexing, done, failed:error_msg
         }
-        
+
     Notes:
         - Frontend can poll this endpoint to show indexing progress
         - Status values:
@@ -610,17 +672,17 @@ def index_status(doc_id: str):
 def delete_document(doc_id: str):
     """
     Delete a document and all its chunks from the index.
-    
+
     Path Parameters:
         doc_id (str): The document ID to delete
-        
+
     Returns:
         {"deleted": doc_id}  # Confirms deletion
-        
+
     Raises:
         HTTPException 404: Document not found
         HTTPException 500: Database deletion error
-        
+
     Notes:
         - Removes all chunks (doc_id_0, doc_id_1, ...) from ChromaDB
         - This is irreversible; consider warning users or implementing soft delete
