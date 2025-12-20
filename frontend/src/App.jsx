@@ -37,7 +37,7 @@ export default function App() {
       const j = await r.json()
       setDocuments(j.documents || [])
     } catch (err) {
-      console.error('Failed to load documents', err)
+      console.error('Không thể tải tài liệu', err)
     }
   }
 
@@ -49,13 +49,13 @@ export default function App() {
     const input = document.getElementById('fileinput')
     const f = input?.files?.[0]
     if (!f) {
-      setToast({ text: 'Please choose a file to upload', type: 'error' })
+      setToast({ text: 'Vui lòng chọn tệp để tải lên', type: 'error' })
       return
     }
 
     // Client-side validation: block empty files
     if (f.size === 0) {
-      setToast({ text: 'Selected file is empty', type: 'error' })
+      setToast({ text: 'Tệp đã chọn trống', type: 'error' })
       return
     }
 
@@ -63,7 +63,7 @@ export default function App() {
     setUploading(true)
     try {
       if (enableOCR) {
-        setToast({ text: 'Attempting OCR fallback (may take longer)...', type: 'info' })
+        setToast({ text: 'Đang cố gắng OCR (có thể mất nhiều thời gian hơn)...', type: 'info' })
       }
       const fd = new FormData()
       fd.append('file', f)
@@ -77,10 +77,10 @@ export default function App() {
       }
       const j = await r.json()
       // Compose success message with OCR/page info if present
-      let msg = `Uploaded: ${j.doc_id}`
-      if (j.ocr_used) msg += ' (OCR used)'
-      if (j.page_count !== undefined) msg += ` — pages: ${j.page_count}`
-      if (j.ocr_truncated) msg += ' — OCR truncated to max pages'
+      let msg = `Đã tải lên: ${j.doc_id}`
+      if (j.ocr_used) msg += ' (đã sử dụng OCR)'
+      if (j.page_count !== undefined) msg += ` — trang: ${j.page_count}`
+      if (j.ocr_truncated) msg += ' — OCR bị cắt bớt đến số trang tối đa'
       setToast({ text: msg, type: 'success' })
       // clear input
       input.value = ''
@@ -89,7 +89,7 @@ export default function App() {
       loadDocuments()
     } catch (err) {
       console.error(err)
-      setToast({ text: `Upload failed: ${err.message}`, type: 'error' })
+      setToast({ text: `Tải lên thất bại: ${err.message}`, type: 'error' })
     } finally {
       setUploading(false)
     }
@@ -122,11 +122,11 @@ export default function App() {
           <button onClick={handleUpload} disabled={uploading}>
             {uploading ? (
               enableOCR ? (
-                <span className="btn-with-spinner">Uploading (OCR in progress)... <span className="spinner"/></span>
+                <span className="btn-with-spinner">Đang tải lên (OCR đang tiến hành)... <span className="spinner"/></span>
               ) : (
-                'Uploading...'
+                'Đang tải lên...'
               )
-            ) : 'Upload'}
+            ) : 'Tải lên tài liệu'}
           </button>
         </div>
         {selectedFile && <div className="file-selected">Selected: {selectedFile}</div>}
@@ -144,14 +144,14 @@ export default function App() {
                   )}
                   <div style={{ marginTop: 4 }}>
                     <button onClick={async () => {
-                      if (!confirm('Delete document and its chunks?')) return
+                      if (!confirm('Xóa tài liệu và các đoạn của nó?')) return
                       try {
                         const resp = await fetch(`${API_BASE}/documents/${d.doc_id}`, { method: 'DELETE' })
                         if (!resp.ok) throw new Error(await resp.text())
-                        setToast({ text: `Deleted ${d.doc_id}`, type: 'info' })
+                        setToast({ text: `Đã xóa ${d.doc_id}`, type: 'info' })
                         loadDocuments()
                       } catch (e) {
-                        setToast({ text: `Delete failed: ${e.message}`, type: 'error' })
+                        setToast({ text: `Xóa không thành công: ${e.message}`, type: 'error' })
                       }
                     }} style={{ marginRight: 8 }}>Delete</button>
                   </div>
