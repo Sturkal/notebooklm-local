@@ -150,7 +150,7 @@ class LLMClient:
             LOG.info("Model listing not supported for backend=%s", self.backend)
             return []
 
-        urls = [f"{OLLAMA_URL}/v1/models", f"{OLLAMA_URL}/models"]
+        urls = [f"{OLLAMA_URL}/v1/models"]
         attempt = 0
         while attempt < self.retries:
             for url in urls:

@@ -12,13 +12,15 @@ services:
       # Redis for rate limiting
       - REDIS_URL=redis://redis:6379/0
       # Ollama backend (use service hostname 'ollama' in docker network)
-      - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama2:latest
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:latest
     volumes:
       - backend_data:/data
     networks:
       - notebooklm-net
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7-alpine
@@ -26,18 +28,6 @@ services:
     restart: unless-stopped
     networks:
       - notebooklm-net
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: notebooklm-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    networks:
-      - notebooklm-net
-    # Optional: mount volume to persist model cache
-    # volumes:
-    #   - ollama_data:/root/.ollama
 
   frontend:
     build:
