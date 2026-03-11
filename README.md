@@ -22,7 +22,7 @@ Short description:
 		- `Dockerfile` — builds backend container (installs Tesseract, poppler, system libs required by PDF/image extraction)
 		- `requirements.txt` — Python dependencies (pinned where required)
 		- `api/main.py` — FastAPI app and endpoints (`/upload`, `/ask`, `/health`, `/documents`, `/llm/models`)
-		- `extract.py` — extract text from PDF/DOCX/TXT; optional OCR fallback (pytesseract + pdf2image)
+		- `extract.py` — extract text from PDF/DOCX/TXT; automatic OCR fallback (pytesseract + pdf2image) if PDF text extraction fails
 		- `indexer.py` — Indexer: chunks text, creates embeddings (SentenceTransformer), stores vectors in ChromaDB
 		- `llm_client.py` — wrapper around LLM backend (Ollama by default) with retries, timeouts, tolerant parsing and a `list_models()` helper
 		- `chroma_db/` — (optional) local sqlite/Chroma store when running without an external volume
@@ -33,15 +33,15 @@ Short description:
 
 	Status / Key features
 	- Upload files (PDF/DOCX/TXT), extract text, index into ChromaDB.
-	- Optional OCR fallback for PDFs (Tesseract + pdf2image). You can enable OCR per-upload from the frontend and set an OCR max page limit.
-	- Frontend shows upload progress, OCR status, and a success toast containing `ocr_used`, `page_count` and `ocr_truncated` when applicable.
+	- Automatic OCR fallback for PDFs (Tesseract + pdf2image): when PDF text extraction fails, OCR is automatically triggered to extract text from scanned images. All pages are processed (no page limits).
+	- Frontend shows upload progress and displays a success toast containing `ocr_used` and `page_count` when applicable.
 	- Documents list in the sidebar (with delete) — scrollable when long.
 	- Chat UI: sends RAG-based prompt to LLM and displays answer, sources and snippets.
 	- Model selection: frontend fetches available models from the backend (`GET /llm/models`) and lets user pick a model to use for `/ask` requests.
 	- Friendly LLM error handling in the chat UI: if the backend returns a low-level connection error (e.g., Ollama not running), the UI shows a friendly message and a collapsible raw-error block for diagnostics.
 
 	Important endpoints (backend)
-	- `POST /upload` — multipart/form-data with `file` and optional form fields `enable_ocr` (`true|false`) and `ocr_max_pages` (int). Response example (success):
+	- `POST /upload` — multipart/form-data with `file`. Response example (success):
 
 		{
 			"status": "ok",
@@ -50,6 +50,8 @@ Short description:
 			"page_count": 7,
 			"ocr_truncated": false
 		}
+
+		Note: OCR is automatically attempted if text extraction from PDF fails. The response includes `ocr_used` to indicate whether OCR was triggered, and `page_count` for the total pages in the PDF.
 
 	- `GET /ask?q=...&top_k=5&model=<modelname>` — performs retrieval, builds the RAG prompt and forwards it to the configured LLM. The optional `model` query param is passed to the LLM client (Ollama `?model=`).
 
@@ -121,7 +123,7 @@ Short description:
 
 	Uploading and using OCR
 
-	- From the frontend upload panel you can enable the OCR fallback and set `OCR max pages`. If the extractor finds no text in the PDF and OCR is enabled, the backend will run page-by-page OCR (up to the configured max pages) and return `ocr_used`, `page_count`, and `ocr_truncated` in the upload response.
+	- OCR is automatically enabled for PDFs. If the text extractor fails to extract text using PyMuPDF, the backend will automatically run page-by-page OCR (Tesseract) on all pages and return `ocr_used: true` in the upload response.
 
 	- Backend OCR requirements (Docker image includes these):
 		- `tesseract-ocr` (system package), Python packages: `pytesseract`, `pdf2image`.
@@ -130,7 +132,7 @@ Short description:
 	Frontend UX notes
 
 	- The sidebar Uploaded Documents list is scrollable when it grows long.
-	- Upload button shows an OCR-specific spinner/message when OCR is enabled.
+	- Upload button is straightforward: select a file and click "Tải lên tài liệu" (Upload document). OCR is handled automatically.
 	- Chat UI:
 		- Fetches available LLM models from `/llm/models` and displays a selector.
 		- Sends the selected model (if any) via `&model=...` to `/ask`.
@@ -160,7 +162,7 @@ Short description:
 	- Upload a file with curl (PowerShell):
 
 	```powershell
-	curl -X POST "http://localhost:8000/upload" -F "file=@C:/path/to/doc.pdf" -F "enable_ocr=true" -F "ocr_max_pages=10"
+	curl -X POST "http://localhost:8000/upload" -F "file=@C:/path/to/doc.pdf"
 	```
 
 	- Ask a question:
@@ -178,7 +180,7 @@ Short description:
 	Development ideas / next steps
 
 	- Persist the selected LLM model in `localStorage` so the user choice survives reloads (easy frontend change).
-	- Store OCR `page_count` and `ocr_truncated` in document metadata during indexing so the documents list can display per-document OCR stats.
+	- Store OCR `page_count` in document metadata during indexing so the documents list can display per-document OCR stats.
 	- Add integration tests that run in a controlled environment (Docker) to upload a sample document and run `/ask`.
 
 	If you want, I can:

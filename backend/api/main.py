@@ -290,7 +290,7 @@ def get_indexer() -> Indexer:
 # Upload Configuration & Security
 # ============================================================================
 # Enforces security constraints on file uploads:
-# - MAX_UPLOAD_SIZE: Max file size (default 10 MB)
+# - MAX_UPLOAD_SIZE: Max file size (default 100 MB)
 # - ALLOWED_EXT: Whitelist of supported file extensions
 #
 # Filename Sanitization:
@@ -302,16 +302,14 @@ UPLOAD_DIR = os.environ.get("UPLOAD_DIR", ".uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 MAX_UPLOAD_SIZE = int(
-    os.environ.get("MAX_UPLOAD_SIZE", 10 * 1024 * 1024)
-)  # 10 MB default
+    os.environ.get("MAX_UPLOAD_SIZE", 100 * 1024 * 1024)
+)  # 100 MB default
 ALLOWED_EXT = {".pdf", ".docx", ".txt"}
 
 
 @app.post("/upload")
 async def upload(
     file: UploadFile = File(...),
-    enable_ocr: bool = Form(False),
-    ocr_max_pages: int | None = Form(None),
     background_tasks: BackgroundTasks = None,
 ):
     """
@@ -321,14 +319,12 @@ async def upload(
     1. Validates file type (must be .pdf, .docx, or .txt)
     2. Enforces size limits (MAX_UPLOAD_SIZE)
     3. Sanitizes filename (remove path traversal, add UUID prefix)
-    4. Extracts text (with optional OCR fallback for PDFs)
+    4. Extracts text (with automatic OCR fallback for PDFs if text extraction fails)
     5. Pre-validates that chunks can be generated (fail early if doc is empty)
     6. Schedules background indexing and returns immediately
 
     Form Parameters:
         file (UploadFile): The document file to upload
-        enable_ocr (bool): Enable OCR fallback if PDF text extraction fails
-        ocr_max_pages (int): Max pages to process with OCR (if enabled)
 
     Returns:
         {
@@ -348,6 +344,7 @@ async def upload(
         - Upload returns immediately; indexing happens in background
         - Poll /index/status/{doc_id} to monitor indexing progress
         - Temp files are cleaned up on error
+        - OCR is automatically enabled for PDFs and will be attempted if text extraction fails
     """
     # ========================================================================
     # Step 1: Validate and Sanitize Filename
@@ -388,7 +385,7 @@ async def upload(
         except Exception:
             pass
 
-        res = extract(path, ocr_enabled=enable_ocr, ocr_max_pages=ocr_max_pages)
+        res = extract(path)
         if res is None:
             raise ValueError("Unsupported file type or extraction failed")
         _, text, ocr_used, page_count, ocr_truncated = res
@@ -398,7 +395,7 @@ async def upload(
         print(f"DEBUG: Extracted text length: {len(text)}", file=sys.stderr)
         print(f"DEBUG: Extract preview: {repr(preview)}", file=sys.stderr)
         print(
-            f"DEBUG: OCR requested={enable_ocr}, OCR used={ocr_used}, ocr_max_pages={ocr_max_pages}, page_count={page_count}, ocr_truncated={ocr_truncated}",
+            f"DEBUG: OCR auto-enabled for PDFs. OCR used={ocr_used}, page_count={page_count}, ocr_truncated={ocr_truncated}",
             file=sys.stderr,
         )
 

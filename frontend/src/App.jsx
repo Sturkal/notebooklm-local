@@ -25,8 +25,6 @@ function Toast({ toast, onClose }) {
 export default function App() {
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
-  const [enableOCR, setEnableOCR] = useState(false)
-  const [ocrMaxPages, setOcrMaxPages] = useState(10)
   const [toast, setToast] = useState(null)
   const [documents, setDocuments] = useState([])
 
@@ -62,14 +60,9 @@ export default function App() {
     setSelectedFile(f.name)
     setUploading(true)
     try {
-      if (enableOCR) {
-        setToast({ text: 'Đang cố gắng OCR (có thể mất nhiều thời gian hơn)...', type: 'info' })
-      }
+      setToast({ text: 'Đang tải lên và xử lý tài liệu...', type: 'info' })
       const fd = new FormData()
       fd.append('file', f)
-      // pass OCR preferences to backend
-      fd.append('enable_ocr', enableOCR ? 'true' : 'false')
-      fd.append('ocr_max_pages', String(ocrMaxPages))
       const r = await fetch(`${API_BASE}/upload`, { method: 'POST', body: fd })
       if (!r.ok) {
         const errText = await r.text()
@@ -80,7 +73,6 @@ export default function App() {
       let msg = `Đã tải lên: ${j.doc_id}`
       if (j.ocr_used) msg += ' (đã sử dụng OCR)'
       if (j.page_count !== undefined) msg += ` — trang: ${j.page_count}`
-      if (j.ocr_truncated) msg += ' — OCR bị cắt bớt đến số trang tối đa'
       setToast({ text: msg, type: 'success' })
       // clear input
       input.value = ''
@@ -105,27 +97,9 @@ export default function App() {
         <h4>Upload Document</h4>
         <input id="fileinput" type="file" />
         <div style={{ marginTop: 8 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="checkbox" checked={enableOCR} onChange={e => setEnableOCR(e.target.checked)} />
-            Enable OCR fallback
-          </label>
-          {enableOCR && (
-            <div style={{ marginTop: 6 }}>
-              <label>
-                OCR max pages: 
-                <input type="number" min={1} max={100} value={ocrMaxPages} onChange={e => setOcrMaxPages(Number(e.target.value))} style={{ width: 80, marginLeft: 8 }} />
-              </label>
-            </div>
-          )}
-        </div>
-        <div style={{ marginTop: 8 }}>
           <button onClick={handleUpload} disabled={uploading}>
             {uploading ? (
-              enableOCR ? (
-                <span className="btn-with-spinner">Đang tải lên (OCR đang tiến hành)... <span className="spinner"/></span>
-              ) : (
-                'Đang tải lên...'
-              )
+              <span className="btn-with-spinner">Đang tải lên... <span className="spinner"/></span>
             ) : 'Tải lên tài liệu'}
           </button>
         </div>
